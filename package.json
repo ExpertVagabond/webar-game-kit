@@ -1,0 +1,9 @@
+{
+  "name": "webar-game-kit",
+  "version": "0.1.0",
+  "description": "WebAR game engine starter kit — Catmull-Rom splines, scoring, orbit controls",
+  "private": true,
+  "scripts": { "dev": "vite", "build": "vite build" },
+  "devDependencies": { "vite": "^5.0.0" },
+  "dependencies": { "three": "^0.162.0" }
+}
