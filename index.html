@@ -161,5 +161,182 @@
   window.addEventListener('load',()=>setTimeout(()=>document.getElementById('splash').classList.add('done'),800));
   document.querySelectorAll('.psm-footer-link').forEach(l=>{l.addEventListener('mouseenter',()=>{if(l.classList.contains('current'))return;const p=document.createElement('link');p.rel='prefetch';p.href=l.href;if(!document.querySelector('link[href="'+l.href+'"]'))document.head.appendChild(p)},{once:true})});
   </script>
+
+  <!-- WebGL Neon Grid Shader Background -->
+  <script>
+  (function(){
+    const canvas = document.getElementById('shader-bg');
+    const gl = canvas.getContext('webgl', {alpha:true, antialias:false, depth:false, stencil:false});
+    if(!gl) return;
+
+    const RESOLUTION_SCALE = 0.5;
+
+    function resize(){
+      const dpr = window.devicePixelRatio || 1;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      canvas.width = Math.floor(w * dpr * RESOLUTION_SCALE);
+      canvas.height = Math.floor(h * dpr * RESOLUTION_SCALE);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const VERT_SRC = `
+      attribute vec2 a_pos;
+      void main(){ gl_Position = vec4(a_pos, 0.0, 1.0); }
+    `;
+
+    const FRAG_SRC = `
+      precision mediump float;
+      uniform float u_time;
+      uniform vec2 u_resolution;
+
+      // Hash for stars
+      float hash(vec2 p){
+        p = fract(p * vec2(123.34, 456.21));
+        p += dot(p, p + 45.32);
+        return fract(p.x * p.y);
+      }
+
+      void main(){
+        vec2 uv = gl_FragCoord.xy / u_resolution;
+        vec2 p = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+
+        // Sky color: dark with subtle gradient
+        vec3 col = vec3(0.02, 0.02, 0.05);
+
+        // Horizon glow — soft cyan/green at horizon line
+        float horizonY = -0.05;
+        float horizonGlow = exp(-8.0 * pow(p.y - horizonY, 2.0));
+        col += vec3(0.0, 0.12, 0.1) * horizonGlow * 0.6;
+
+        // Faint stars above horizon
+        if(p.y > horizonY + 0.02){
+          vec2 starUV = floor(gl_FragCoord.xy * 0.5) * 0.5;
+          float star = hash(starUV);
+          float twinkle = sin(u_time * 0.7 + star * 6.2831) * 0.5 + 0.5;
+          star = smoothstep(0.992, 0.999, star);
+          float aboveHorizon = smoothstep(horizonY + 0.02, horizonY + 0.15, p.y);
+          col += star * twinkle * vec3(0.5, 0.6, 0.7) * 0.4 * aboveHorizon;
+        }
+
+        // ── GRID ──
+        // Only below horizon
+        if(p.y < horizonY + 0.01){
+          // Perspective projection: map screen Y to a ground plane
+          float camH = 0.35;
+          float focalLen = 0.6;
+          float worldZ = camH * focalLen / (horizonY - p.y + 0.001);
+
+          // Scroll forward
+          float speed = u_time * 1.8;
+          float worldX = p.x * worldZ / focalLen;
+
+          // Grid spacing
+          float gridSpacing = 1.0;
+          float scrollZ = worldZ + speed;
+
+          // Grid lines with anti-aliased smoothstep
+          float lineWidthX = 0.035 * worldZ;
+          float lineWidthZ = 0.035 * worldZ;
+
+          float gx = abs(fract(worldX / gridSpacing + 0.5) - 0.5) * gridSpacing;
+          float gz = abs(fract(scrollZ / gridSpacing + 0.5) - 0.5) * gridSpacing;
+
+          float lineX = 1.0 - smoothstep(0.0, lineWidthX, gx);
+          float lineZ = 1.0 - smoothstep(0.0, lineWidthZ, gz);
+
+          float grid = max(lineX, lineZ);
+
+          // Distance fog — fade out far lines
+          float fog = exp(-0.015 * worldZ);
+          grid *= fog;
+
+          // Subtle glow bloom — thicker secondary line for bloom effect
+          float bloomWidthX = lineWidthX * 4.0;
+          float bloomWidthZ = lineWidthZ * 4.0;
+          float bloomX = 1.0 - smoothstep(0.0, bloomWidthX, gx);
+          float bloomZ = 1.0 - smoothstep(0.0, bloomWidthZ, gz);
+          float bloom = max(bloomX, bloomZ) * 0.25 * fog;
+
+          // Color: green-cyan gradient with distance
+          vec3 gridColor = mix(vec3(0.0, 0.95, 0.7), vec3(0.0, 0.7, 0.85), fog);
+          vec3 bloomColor = mix(vec3(0.0, 0.9, 0.6), vec3(0.0, 0.5, 0.7), fog);
+
+          // Fade grid at very near (bottom of screen) to avoid harsh cutoff
+          float nearFade = smoothstep(0.5, 3.0, worldZ);
+
+          col += gridColor * grid * 0.7 * nearFade;
+          col += bloomColor * bloom * nearFade;
+
+          // Horizon haze on the grid plane
+          float haze = exp(-0.008 * worldZ);
+          col = mix(col, col + vec3(0.0, 0.06, 0.05), (1.0 - haze) * 0.5);
+        }
+
+        // Central beam glow at horizon
+        float beamX = exp(-6.0 * p.x * p.x);
+        float beamY = exp(-30.0 * pow(p.y - horizonY, 2.0));
+        col += vec3(0.0, 0.25, 0.2) * beamX * beamY * 0.3;
+
+        // Vignette
+        float vign = 1.0 - 0.35 * length((uv - 0.5) * 1.5);
+        col *= vign;
+
+        // Overall brightness (keep subtle — don't overpower UI)
+        col *= 0.75;
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    function compile(type, src){
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
+        console.error('Shader compile error:', gl.getShaderInfoLog(s));
+        gl.deleteShader(s);
+        return null;
+      }
+      return s;
+    }
+
+    const vs = compile(gl.VERTEX_SHADER, VERT_SRC);
+    const fs = compile(gl.FRAGMENT_SHADER, FRAG_SRC);
+    if(!vs || !fs) return;
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){
+      console.error('Program link error:', gl.getProgramInfoLog(prog));
+      return;
+    }
+    gl.useProgram(prog);
+
+    // Fullscreen quad (two triangles)
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+
+    const aPos = gl.getAttribLocation(prog, 'a_pos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    const uTime = gl.getUniformLocation(prog, 'u_time');
+    const uRes  = gl.getUniformLocation(prog, 'u_resolution');
+
+    function frame(t){
+      gl.uniform1f(uTime, t * 0.001);
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
 </body>
 </html>
