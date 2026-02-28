@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>WebAR Game Kit — Mini Golf</title>
+  <meta name="description" content="Playable mini-golf with aim and shoot physics, AI caddy tips, and scoring. Built with Three.js as a reusable WebAR game engine starter kit.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root{--bg:#08080f;--surface:#111119;--purple:#7611b7;--cyan:#00b5ad;--green:#00edaf;--text:#eae6f2;--text-dim:#7b7390}
@@ -23,6 +25,7 @@
     .panel h3{font-size:0.75rem;color:var(--cyan);font-family:'JetBrains Mono',monospace;margin-bottom:0.5rem}
 
     .sidebar{position:fixed;top:70px;right:1rem;z-index:10;display:flex;flex-direction:column;gap:0.75rem;width:180px}
+    @media (max-width:600px){.sidebar{width:140px;top:60px;right:0.5rem}.sidebar .panel{padding:0.5rem}.score-entry{font-size:0.65rem}}
     .score-entry{font-family:'JetBrains Mono',monospace;font-size:0.75rem;padding:0.15rem 0;border-bottom:1px solid rgba(255,255,255,0.04)}
     #total-score{margin-top:0.5rem;font-weight:700;font-size:0.85rem;color:var(--green)}
 
