@@ -2,37 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebAR Game Kit — Purple Squirrel Media</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>WebAR Game Kit — Mini Golf</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root{--bg:#08080f;--surface:#111119;--purple:#7611b7;--cyan:#00b5ad;--green:#00edaf;--text:#eae6f2;--text-dim:#7b7390}
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{height:100%;overflow:hidden}
     body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text)}
-    #viewer{position:fixed;inset:0}
+    #viewer{position:fixed;inset:0;touch-action:none}
 
     .hud{position:fixed;top:0;left:0;right:0;z-index:10;padding:0.75rem 1rem;background:linear-gradient(180deg,rgba(8,8,15,0.92),transparent);display:flex;justify-content:space-between;align-items:flex-start}
     .hud h1{font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .hud small{font-family:'JetBrains Mono',monospace;color:var(--text-dim);font-size:0.7rem}
+    .hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:0.15rem}
+    #hole-label{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--cyan)}
+    #par-label{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--text-dim)}
+    #stroke-count{font-family:'JetBrains Mono',monospace;font-size:0.85rem;font-weight:600;color:var(--green)}
 
     .panel{background:var(--surface);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:0.75rem;font-size:0.8rem}
     .panel h3{font-size:0.75rem;color:var(--cyan);font-family:'JetBrains Mono',monospace;margin-bottom:0.5rem}
 
-    .sidebar{position:fixed;top:70px;right:1rem;z-index:10;display:flex;flex-direction:column;gap:0.75rem;width:200px}
-
+    .sidebar{position:fixed;top:70px;right:1rem;z-index:10;display:flex;flex-direction:column;gap:0.75rem;width:180px}
     .score-entry{font-family:'JetBrains Mono',monospace;font-size:0.75rem;padding:0.15rem 0;border-bottom:1px solid rgba(255,255,255,0.04)}
     #total-score{margin-top:0.5rem;font-weight:700;font-size:0.85rem;color:var(--green)}
 
     .controls-bar{position:fixed;bottom:0;left:0;right:0;z-index:10;padding:1rem;background:linear-gradient(0deg,rgba(8,8,15,0.95),transparent);display:flex;gap:1rem;align-items:center;justify-content:center}
     .ctrl-btn{background:var(--surface);border:1px solid rgba(255,255,255,0.1);color:var(--text);font-family:'Outfit',sans-serif;font-weight:600;font-size:0.85rem;padding:0.5rem 1rem;border-radius:10px;cursor:pointer}
     .ctrl-btn:active{background:var(--purple)}
-    .slider-wrap{display:flex;align-items:center;gap:0.5rem}
-    .slider-wrap label{font-size:0.75rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace}
-    .slider-wrap input{width:100px;accent-color:var(--purple)}
-    #speed-val{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--green);min-width:35px}
 
-    .badge{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--text-dim);z-index:10;pointer-events:none}
+    .power-bar{width:120px;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden}
+    .power-fill{height:100%;width:0;border-radius:4px;background:var(--green);transition:background 0.1s}
+
+    .aim-hint{position:fixed;bottom:75px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--text-dim);z-index:10;pointer-events:none;text-align:center}
+
+    .toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100;background:var(--surface);border:1px solid var(--green);color:var(--text);padding:0.8rem 2rem;border-radius:14px;font-size:1.1rem;font-weight:700;opacity:0;transition:all 0.3s;pointer-events:none;text-align:center}
+    .toast.show{opacity:1;transform:translate(-50%,-50%) scale(1.05)}
   </style>
 </head>
 <body>
@@ -40,8 +44,12 @@
 
   <div class="hud">
     <div>
-      <h1>WebAR Game Kit</h1>
-      <small>CurveAnimator + ScoreSystem demo</small>
+      <h1>Mini Golf</h1>
+      <span id="hole-label" style="font-size:0.75rem;color:var(--cyan)">Hole 1</span>
+    </div>
+    <div class="hud-right">
+      <span id="par-label">Par 3</span>
+      <span id="stroke-count">Strokes: 0</span>
     </div>
   </div>
 
@@ -53,16 +61,17 @@
     </div>
   </div>
 
-  <div class="badge">CurveAnimator: arc-length parametrized Catmull-Rom spline</div>
+  <div class="aim-hint">click + drag to aim &bull; pull back to shoot</div>
 
   <div class="controls-bar">
-    <button class="ctrl-btn" id="pause-btn">⏸ Pause</button>
-    <div class="slider-wrap">
-      <label>Speed</label>
-      <input type="range" id="speed-slider" min="0.1" max="8" step="0.1" value="2">
-      <span id="speed-val">2.0x</span>
+    <button class="ctrl-btn" id="reset-btn">&#8634; Reset Ball</button>
+    <div style="display:flex;align-items:center;gap:0.5rem">
+      <span style="font-size:0.7rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace">Power</span>
+      <div class="power-bar"><div class="power-fill" id="power-fill"></div></div>
     </div>
   </div>
+
+  <div class="toast" id="toast"></div>
 
   <script type="module" src="/src/app.js"></script>
 </body>
