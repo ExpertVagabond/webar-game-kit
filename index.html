@@ -23,11 +23,11 @@
     :root{--bg:#08080f;--surface:#111119;--purple:#8b5cf6;--purple-light:#c084fc;--cyan:#00b5ad;--green:#00edaf;--text:#eae6f2;--text-dim:#7b7390;--red:#ef4444}
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{height:100%;overflow:hidden}
-    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text)}
+    body{font-family:'Outfit',sans-serif;background:rgba(8,8,15,.55);color:var(--text)}
     #viewer{position:fixed;inset:0;touch-action:none}
 
     /* ── Loading splash — ambient glow ── */
-    .splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse 60% 50% at 50% 45%,rgba(0,237,175,.12),rgba(0,181,173,.06) 40%,rgba(139,92,246,.04) 60%,var(--bg) 80%);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:opacity .5s,visibility .5s}
+    .splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse 60% 50% at 50% 45%,rgba(0,237,175,.08),rgba(0,181,173,.04) 40%,rgba(139,92,246,.02) 60%,rgba(8,8,15,.7) 80%);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:opacity .5s,visibility .5s}
     .splash.done{opacity:0;visibility:hidden;pointer-events:none}
     .splash-logo{width:56px;height:56px;border-radius:50%;box-shadow:0 0 40px rgba(0,237,175,.25),0 0 80px rgba(0,181,173,.12),0 0 120px rgba(139,92,246,.08);animation:splashPulse 1.2s ease-in-out infinite}
     .splash-bar{width:120px;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:4px}
@@ -36,7 +36,7 @@
     @keyframes splashLoad{to{width:100%}}
 
     /* ── HUD — glassmorphism top bar ── */
-    .hud{position:fixed;top:0;left:0;right:0;z-index:10;padding:0.75rem 1rem;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);background:rgba(8,8,15,.6);border-bottom:1px solid rgba(0,237,175,.08);display:flex;justify-content:space-between;align-items:flex-start}
+    .hud{position:fixed;top:0;left:0;right:0;z-index:10;padding:0.75rem 1rem;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);background:rgba(8,8,15,.5);border-bottom:1px solid rgba(0,237,175,.08);display:flex;justify-content:space-between;align-items:flex-start}
     .hud h1{font-size:1.2rem;font-weight:900;letter-spacing:-.01em;background:linear-gradient(135deg,var(--green) 0%,var(--cyan) 60%,var(--purple-light) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 8px rgba(0,237,175,.15))}
     .hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:0.2rem}
     #hole-label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;font-weight:600;color:var(--cyan);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);background:rgba(0,181,173,.1);border:1px solid rgba(0,181,173,.15);padding:0.15rem 0.6rem;border-radius:20px;letter-spacing:.02em}
@@ -56,7 +56,7 @@
     @keyframes totalGlow{0%{text-shadow:0 0 10px rgba(0,237,175,.3),0 0 20px rgba(0,237,175,.1)}100%{text-shadow:0 0 16px rgba(0,237,175,.5),0 0 32px rgba(0,237,175,.2)}}
 
     /* ── Controls bar — glass bottom bar ── */
-    .controls-bar{position:fixed;bottom:0;left:0;right:0;z-index:10;padding:1rem;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);background:rgba(8,8,15,.7);border-top:1px solid rgba(255,255,255,.05);display:flex;gap:1rem;align-items:center;justify-content:center}
+    .controls-bar{position:fixed;bottom:0;left:0;right:0;z-index:10;padding:1rem;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);background:rgba(8,8,15,.55);border-top:1px solid rgba(255,255,255,.05);display:flex;gap:1rem;align-items:center;justify-content:center}
     .ctrl-btn{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);background:rgba(17,17,25,.6);border:1px solid rgba(255,255,255,.1);color:var(--text);font-family:'Outfit',sans-serif;font-weight:600;font-size:0.9rem;padding:0.55rem 1.1rem;border-radius:12px;cursor:pointer;transition:all .2s ease;letter-spacing:.01em}
     .ctrl-btn:hover{background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.25);box-shadow:0 0 10px rgba(139,92,246,.12)}
     .ctrl-btn:active{background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.4);box-shadow:0 0 15px rgba(139,92,246,.2);transform:scale(.97)}
@@ -94,6 +94,8 @@
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"WebAR Game Kit — Mini Golf","description":"Playable mini-golf with aim and shoot physics, AI caddy tips, and scoring.","applicationCategory":"WebApplication","operatingSystem":"Web Browser","author":{"@type":"Organization","name":"Purple Squirrel Media","url":"https://purplesquirrelmedia.io"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 </head>
 <body>
+
+  <canvas id="shader-bg" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none"></canvas>
 
   <div class="splash" id="splash">
     <img src="/logo-nav.jpg" alt="PSM" class="splash-logo">
