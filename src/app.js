@@ -7,6 +7,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { ScoreSystem } from './score-system.js'
+import { analyzeShotSetup, getScoreReaction, getCourseIntro, analyzeStroke } from './ai-caddy.js'
 
 let renderer, scene, camera, controls, clock
 let ball, hole, aimArrow, powerBar
@@ -254,6 +255,10 @@ function loadCourse(index) {
   document.getElementById('par-label').textContent = `Par ${course.par}`
   score.currentStrokes = 0
   updateStrokeDisplay()
+
+  // AI caddy course intro
+  const intro = getCourseIntro(course.label)
+  updateCaddyTip(intro)
 }
 
 // ── Input ──
@@ -263,6 +268,11 @@ function onPointerDown(e) {
   aimStart.set(e.clientX, e.clientY)
   aimCurrent.copy(aimStart)
   controls.enabled = false
+
+  // AI caddy shot setup analysis
+  const course = COURSES[currentHole]
+  const tip = analyzeShotSetup(ball.position, course.holePos, course.walls)
+  updateCaddyTip(tip)
 }
 
 function onPointerMove(e) {
@@ -312,6 +322,15 @@ function onPointerUp() {
 
     score.addStroke()
     updateStrokeDisplay()
+
+    // AI caddy shot tip (delayed until ball stops)
+    const course = COURSES[currentHole]
+    setTimeout(() => {
+      if (!ballMoving) {
+        const tip = analyzeStroke(ball.position, course.holePos, score.currentStrokes, course.par)
+        updateCaddyTip(tip)
+      }
+    }, 2000)
   }
 
   isAiming = false
@@ -384,7 +403,8 @@ function checkHole() {
     ballMoving = false
 
     const entry = score.scoreHole(course.par)
-    showToast(`Hole ${entry.hole}: ${entry.term}! (${entry.score} strokes)`)
+    const reaction = getScoreReaction(entry.term)
+    showToast(reaction, 4000)
 
     if (navigator.vibrate) navigator.vibrate([50, 50, 100])
 
@@ -401,6 +421,16 @@ function checkHole() {
 
 function updateStrokeDisplay() {
   document.getElementById('stroke-count').textContent = `Strokes: ${score.currentStrokes}`
+}
+
+function updateCaddyTip(tip) {
+  const el = document.getElementById('caddy-tip')
+  if (el) {
+    el.textContent = tip
+    el.style.opacity = '1'
+    clearTimeout(el._timer)
+    el._timer = setTimeout(() => { el.style.opacity = '0.6' }, 5000)
+  }
 }
 
 function showToast(msg, duration = 3000) {
